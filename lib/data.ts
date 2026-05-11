@@ -14,36 +14,33 @@ export type Post = {
   body?: string;
 };
 
-export type Activity = {
-  ts: string;
-  action: string;
-  what: string;
-};
-
 export const author = {
   name: "J. Calder",
   initials: "JC",
   bio: "Self-studying mathematics by moonlight. Currently working through linear algebra — Axler, mostly, with Strang for intuition and Halmos for old-world clarity.",
 };
 
-export const tags = [
-  "Vector Spaces", "Linear Maps", "Bases", "Determinants",
-  "Eigenvalues", "Inner Products", "Spectral Theory",
-  "Dual Spaces", "Operators", "Notebook",
-];
-
-export const activity: Activity[] = [
-  { ts: "21:14", action: "Published",  what: "The Spectral Theorem, slowly" },
-  { ts: "20:42", action: "Edited",     what: "The Spectral Theorem, slowly — added §3" },
-  { ts: "19:08", action: "Uploaded",   what: "fig-spectral-decomp.svg" },
-  { ts: "18:31", action: "Created",    what: "Draft: Jordan normal form, a first attempt" },
-  { ts: "Yest.", action: "Edited",     what: "Determinants are volume, signed" },
-  { ts: "May 02",action: "Tagged",     what: "Eigenvalues as fixed directions → Eigenvalues" },
-];
-
 export function formatDate(iso: string) {
   const d = new Date(iso);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+export function formatRelative(iso: string) {
+  const then = new Date(iso).getTime();
+  const now = Date.now();
+  const diffSec = Math.round((now - then) / 1000);
+  if (diffSec < 30) return "just now";
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.round(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.round(diffMin / 60);
+  if (diffHr < 24) {
+    return new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+  }
+  if (diffHr < 48) return "Yest.";
+  const diffDay = Math.round(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 const SYNODIC = 29.530588853;

@@ -126,3 +126,114 @@ export async function deletePost(id: string): Promise<void> {
   const { error } = await supabase.from("posts").delete().eq("id", id);
   if (error) throw error;
 }
+
+// ─── tags ────────────────────────────────────────────────────────────────────
+
+export async function getTags(): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("tags").select("name").order("name", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(r => r.name as string);
+}
+
+export async function createTag(name: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("tags").insert({ name });
+  if (error) throw error;
+}
+
+export async function deleteTag(name: string): Promise<void> {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("posts")
+    .select("id", { count: "exact", head: true })
+    .eq("tag", name);
+  if ((count ?? 0) > 0) {
+    throw new Error(`Cannot delete "${name}" — ${count} post(s) still use it.`);
+  }
+  const { error } = await supabase.from("tags").delete().eq("name", name);
+  if (error) throw error;
+}
+
+// ─── activity ────────────────────────────────────────────────────────────────
+
+export type ActivityRow = { id: number; action: string; what: string; ts: string };
+
+export async function getActivity(limit = 8): Promise<ActivityRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("activity")
+    .select("*")
+    .order("ts", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as ActivityRow[];
+}
+
+export async function logActivity(action: string, what: string): Promise<void> {
+  const supabase = await createClient();
+  await supabase.from("activity").insert({ action, what });
+}
+
+// ─── pages ───────────────────────────────────────────────────────────────────
+
+export type Page = { slug: string; title: string; content: string };
+
+export async function getPage(slug: string): Promise<Page | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("pages")
+    .select("slug, title, content")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error) throw error;
+  return data as Page | null;
+}
+
+export async function updatePage(slug: string, patch: { title?: string; content?: string }): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("pages").update(patch).eq("slug", slug);
+  if (error) throw error;
+}
+
+// ─── media (Supabase Storage) ────────────────────────────────────────────────
+
+export type MediaFile = { name: string; size: number; updatedAt: string; url: string };
+
+const BUCKET = "media";
+
+export async function listMedia(): Promise<MediaFile[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.storage.from(BUCKET).list("", {
+    limit: 200,
+    sortBy: { column: "updated_at", order: "desc" },
+  });
+  if (error) throw error;
+  const files = (data ?? []).filter(f => f.id !== null);
+  return files.map(f => {
+    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(f.name);
+    return {
+      name: f.name,
+      size: f.metadata?.size ?? 0,
+      updatedAt: f.updated_at ?? f.created_at ?? new Date().toISOString(),
+      url: pub.publicUrl,
+    };
+  });
+}
+
+export async function uploadMedia(name: string, file: ArrayBuffer, contentType: string): Promise<MediaFile> {
+  const supabase = await createClient();
+  const { error } = await supabase.storage.from(BUCKET).upload(name, file, {
+    contentType,
+    upsert: true,
+  });
+  if (error) throw error;
+  const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(name);
+  return { name, size: file.byteLength, updatedAt: new Date().toISOString(), url: pub.publicUrl };
+}
+
+export async function deleteMedia(name: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.storage.from(BUCKET).remove([name]);
+  if (error) throw error;
+}

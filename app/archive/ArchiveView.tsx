@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { tags, type Post } from "@/lib/data";
+import { type Post } from "@/lib/data";
 
-export function ArchiveView({ posts }: { posts: Post[] }) {
+export function ArchiveView({ posts, tags }: { posts: Post[]; tags: string[] }) {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const filtered = activeTag ? posts.filter(p => p.tag === activeTag) : posts;
 

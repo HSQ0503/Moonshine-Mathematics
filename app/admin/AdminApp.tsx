@@ -1,14 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type ChangeEvent, type DragEvent } from "react";
+import { useState, useTransition, type ChangeEvent, type DragEvent, type FormEvent } from "react";
 import { BigMoon } from "@/components/Moon";
 import { ThmBlock, K } from "@/components/Math";
-import { tags as TAGS, activity as ACTIVITY, formatDate, type Post } from "@/lib/data";
-import { savePost, removePost, signOut, type PostInput } from "./actions";
+import { formatDate, formatRelative, type Post } from "@/lib/data";
+import type { ActivityRow, MediaFile, Page } from "@/lib/db";
+import {
+  savePost, removePost, signOut,
+  addTag, removeTag,
+  savePageContent,
+  uploadFile, removeFile,
+  type PostInput,
+} from "./actions";
 
-type Section = "dashboard" | "posts" | "editor" | "media" | "tags" | "settings";
+type Section = "dashboard" | "posts" | "editor" | "media" | "tags" | "about" | "settings";
 
 const EDITOR_TEMPLATE = `# The shape of the question
 
@@ -24,24 +32,20 @@ self-adjoint if $\\langle Tv, w \\rangle = \\langle v, Tw \\rangle$ for all $v, 
 ## Self-adjoint, in pictures
 
 Before the theorem, the word *self-adjoint* felt to me like a bookkeeping
-condition.[^1] What I missed was that this condition is precisely what forces an
-operator to behave the way physical stretches behave: it has only real
-eigenvalues, and eigenvectors for distinct eigenvalues are automatically
-perpendicular.
-
-$$
-\\langle Tv, w \\rangle = \\langle v, Tw \\rangle \\quad\\text{for all } v, w \\in V.
-$$
-
-::: theorem Real Spectral Theorem
-Let $V$ be finite-dimensional and let $T$ be self-adjoint. Then $V$ has an
-orthonormal basis consisting of eigenvectors of $T$.
-:::
+condition.[^1]
 
 [^1]: I am told this is roughly the content of Halmos, ch. 8. I have not yet looked.
 `;
 
-export function AdminApp({ initialPosts }: { initialPosts: Post[] }) {
+type Props = {
+  initialPosts: Post[];
+  initialTags: string[];
+  initialActivity: ActivityRow[];
+  initialMedia: MediaFile[];
+  aboutPage: Page;
+};
+
+export function AdminApp({ initialPosts, initialTags, initialActivity, initialMedia, aboutPage }: Props) {
   const [section, setSection] = useState<Section>("dashboard");
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -52,11 +56,12 @@ export function AdminApp({ initialPosts }: { initialPosts: Post[] }) {
     <div className="admin-shell">
       <AdminSide section={section} setSection={switchSection} />
       <main className="admin-main">
-        {section === "dashboard" && <AdminDashboard posts={initialPosts} openEditor={openEditor} setSection={setSection} />}
+        {section === "dashboard" && <AdminDashboard posts={initialPosts} activity={initialActivity} openEditor={openEditor} setSection={setSection} />}
         {section === "posts" && <AdminPosts posts={initialPosts} openEditor={openEditor} />}
-        {section === "editor" && <AdminEditor posts={initialPosts} postId={editingId} setSection={setSection} />}
-        {section === "media" && <AdminMedia />}
-        {section === "tags" && <AdminTags posts={initialPosts} />}
+        {section === "editor" && <AdminEditor posts={initialPosts} tags={initialTags} media={initialMedia} postId={editingId} setSection={setSection} />}
+        {section === "media" && <AdminMedia media={initialMedia} />}
+        {section === "tags" && <AdminTags tags={initialTags} posts={initialPosts} />}
+        {section === "about" && <AdminAbout page={aboutPage} />}
         {section === "settings" && <AdminSettings />}
       </main>
     </div>
@@ -70,6 +75,7 @@ function AdminSide({ section, setSection }: { section: Section; setSection: (s: 
     { k: "editor",    label: "New Entry" },
     { k: "media",     label: "Media" },
     { k: "tags",      label: "Tags" },
+    { k: "about",     label: "About Page" },
     { k: "settings",  label: "Settings" },
   ];
   return (
@@ -115,7 +121,7 @@ function AdminSide({ section, setSection }: { section: Section; setSection: (s: 
   );
 }
 
-function AdminDashboard({ posts, openEditor, setSection }: { posts: Post[]; openEditor: (id: string | null) => void; setSection: (s: Section) => void }) {
+function AdminDashboard({ posts, activity, openEditor, setSection }: { posts: Post[]; activity: ActivityRow[]; openEditor: (id: string | null) => void; setSection: (s: Section) => void }) {
   const published = posts.filter(p => p.status === "published");
   const drafts = posts.filter(p => p.status === "draft");
   const totalViews = published.reduce((s, p) => s + (p.views || 0), 0);
@@ -148,17 +154,23 @@ function AdminDashboard({ posts, openEditor, setSection }: { posts: Post[]; open
 
         <section className="activity">
           <div className="label">Recent activity</div>
-          <ul>
-            {ACTIVITY.map((a, i) => (
-              <li key={i}>
-                <span className="ts">{a.ts}</span>
-                <span>
-                  <span className="a-action">{a.action}</span>
-                  {a.what}
-                </span>
-              </li>
-            ))}
-          </ul>
+          {activity.length === 0 ? (
+            <div style={{ fontFamily: "var(--serif)", fontStyle: "italic", color: "var(--ink-mute)", fontSize: 14, padding: "8px 0" }}>
+              No activity yet. Edits and uploads will appear here.
+            </div>
+          ) : (
+            <ul>
+              {activity.map(a => (
+                <li key={a.id}>
+                  <span className="ts">{formatRelative(a.ts)}</span>
+                  <span>
+                    <span className="a-action">{a.action}</span>
+                    {a.what}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
     </>
@@ -259,14 +271,12 @@ function AdminPosts({ posts, openEditor }: { posts: Post[]; openEditor: (id: str
   );
 }
 
-type Upload = { name: string; size: string; date: string };
-
-function AdminEditor({ posts, postId, setSection }: { posts: Post[]; postId: string | null; setSection: (s: Section) => void }) {
+function AdminEditor({ posts, tags, media, postId, setSection }: { posts: Post[]; tags: string[]; media: MediaFile[]; postId: string | null; setSection: (s: Section) => void }) {
   const router = useRouter();
   const existing = postId ? posts.find(p => p.id === postId) ?? null : null;
   const [title, setTitle] = useState(existing?.title ?? "Untitled entry");
   const [subtitle, setSub] = useState(existing?.subtitle ?? "A subtitle in italics.");
-  const [tag, setTag] = useState(existing?.tag ?? "Linear Maps");
+  const [tag, setTag] = useState(existing?.tag ?? tags[0] ?? "");
   const [readingTime, setRT] = useState(existing?.readingTime ?? 8);
   const [body, setBody] = useState(existing?.body ?? EDITOR_TEMPLATE);
   const [number, setNumber] = useState(existing?.number ?? "XVI");
@@ -277,19 +287,27 @@ function AdminEditor({ posts, postId, setSection }: { posts: Post[]; postId: str
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [over, setOver] = useState(false);
-  const [uploads, setUploads] = useState<Upload[]>([
-    { name: "fig-spectral-decomp.svg", size: "12 kB", date: "today 19:08" },
-  ]);
+  const [recentlyUploaded, setRecentlyUploaded] = useState<MediaFile[]>([]);
 
   const slugify = (s: string) =>
     s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
   const effectiveSlug = slugInput || slugify(title);
 
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setOver(false);
     const files = Array.from(e.dataTransfer?.files ?? []);
-    files.forEach(f => setUploads(u => [{ name: f.name, size: `${Math.ceil(f.size / 1024)} kB`, date: "just now" }, ...u]));
+    for (const f of files) {
+      try {
+        const data = await fileToBase64(f);
+        const saved = await uploadFile({ name: safeName(f.name), data, contentType: f.type || "application/octet-stream" });
+        setRecentlyUploaded(u => [saved, ...u]);
+        setBody(b => b + `\n\n![${f.name}](${saved.url})\n`);
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : "Upload failed.");
+      }
+    }
+    router.refresh();
   };
 
   const onSave = async () => {
@@ -319,6 +337,8 @@ function AdminEditor({ posts, postId, setSection }: { posts: Post[]; postId: str
       setBusy(false);
     }
   };
+
+  const attached = [...recentlyUploaded, ...media].slice(0, 6);
 
   return (
     <>
@@ -358,7 +378,7 @@ function AdminEditor({ posts, postId, setSection }: { posts: Post[]; postId: str
             <span>Slug <input value={slugInput} onChange={e => setSlugInput(e.target.value)} placeholder={slugify(title)} style={{ width: 180 }} /></span>
             <span style={{ color: "var(--rule)" }}>·</span>
             <span>Tag <select value={tag} onChange={e => setTag(e.target.value)}>
-              {TAGS.map(t => <option key={t}>{t}</option>)}
+              {tags.map(t => <option key={t}>{t}</option>)}
             </select></span>
             <span style={{ color: "var(--rule)" }}>·</span>
             <span>Date <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: 120 }} /></span>
@@ -390,17 +410,17 @@ function AdminEditor({ posts, postId, setSection }: { posts: Post[]; postId: str
             onDrop={handleDrop}
           >
             <div className="big">Drop a figure here</div>
-            <div>or click to browse · SVG, PNG, PDF up to 4 MB (storage not wired yet)</div>
+            <div>uploads to the media bucket and inserts a link at the cursor end</div>
           </div>
 
-          {uploads.length > 0 && (
+          {attached.length > 0 && (
             <div style={{ marginTop: 14, fontFamily: "var(--sans)", fontSize: 11, color: "var(--ink-mute)", letterSpacing: "0.1em" }}>
               <div style={{ textTransform: "uppercase", letterSpacing: "0.18em", marginBottom: 8 }}>Attached</div>
               <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {uploads.map((u, i) => (
-                  <li key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px dashed var(--rule-soft)", fontSize: 12 }}>
+                {attached.map(u => (
+                  <li key={u.name} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px dashed var(--rule-soft)", fontSize: 12 }}>
                     <span style={{ fontFamily: "var(--serif)", color: "var(--ink)" }}>{u.name}</span>
-                    <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink-faint)" }}>{u.size} · {u.date}</span>
+                    <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink-faint)" }}>{formatBytes(u.size)} · {formatRelative(u.updatedAt)}</span>
                   </li>
                 ))}
               </ul>
@@ -439,7 +459,7 @@ function MarkdownPreview({ src }: { src: string }) {
   const renderInline = (text: string, keyBase: string): React.ReactNode[] => {
     const parts: React.ReactNode[] = [];
     let key = 0;
-    const re = /(\$[^$\n]+\$)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(\[\^(\d+)\])/g;
+    const re = /(\$[^$\n]+\$)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(\[\^(\d+)\])|(!\[[^\]]*\]\([^)]+\))/g;
     let last = 0;
     let m: RegExpExecArray | null;
     while ((m = re.exec(text)) !== null) {
@@ -448,6 +468,22 @@ function MarkdownPreview({ src }: { src: string }) {
       else if (m[2]) parts.push(<strong key={`${keyBase}-b${key++}`}>{m[2].slice(2, -2)}</strong>);
       else if (m[3]) parts.push(<em key={`${keyBase}-i${key++}`}>{m[3].slice(1, -1)}</em>);
       else if (m[5]) parts.push(<sup key={`${keyBase}-f${key++}`} style={{ color: "var(--moon)", fontSize: "0.7em" }}>[{m[5]}]</sup>);
+      else if (m[6]) {
+        const inner = m[6];
+        const alt = inner.slice(2, inner.indexOf("]"));
+        const url = inner.slice(inner.indexOf("(") + 1, -1);
+        parts.push(
+          <Image
+            key={`${keyBase}-img${key++}`}
+            src={url}
+            alt={alt}
+            width={640}
+            height={320}
+            unoptimized
+            style={{ display: "block", maxWidth: "100%", height: "auto", margin: "12px 0", border: "1px solid var(--rule)" }}
+          />
+        );
+      }
       last = re.lastIndex;
     }
     if (last < text.length) parts.push(text.slice(last));
@@ -532,62 +568,240 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange?: () => void; l
   );
 }
 
-function AdminMedia() {
-  const figs = [
-    { n: "fig-spectral-decomp.svg", date: "May 04", size: "12 kB", post: "Spectral theorem" },
-    { n: "fig-eigen-fixed.svg",     date: "Mar 27", size: "8 kB",  post: "Eigenvalues" },
-    { n: "fig-determinant-cube.svg",date: "Apr 22", size: "14 kB", post: "Determinants" },
-  ];
+function AdminMedia({ media }: { media: MediaFile[] }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const onUpload = async (files: File[]) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      for (const f of files) {
+        const data = await fileToBase64(f);
+        await uploadFile({ name: safeName(f.name), data, contentType: f.type || "application/octet-stream" });
+      }
+      router.refresh();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Upload failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onDelete = async (name: string) => {
+    if (!confirm(`Delete "${name}"?`)) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await removeFile(name);
+      router.refresh();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Delete failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <>
       <div className="admin-bar">
-        <div><div className="crumbs">Editorial · Library</div><h2>Media</h2></div>
-        <button className="btn">+ Upload</button>
+        <div><div className="crumbs">Editorial · Library</div><h2>Media{busy && <span style={{ marginLeft: 12, fontSize: 11, color: "var(--ink-faint)", letterSpacing: "0.2em", textTransform: "uppercase", fontFamily: "var(--mono)" }}>working…</span>}</h2></div>
+        <label className="btn" style={{ cursor: "pointer" }}>
+          + Upload
+          <input
+            type="file"
+            multiple
+            style={{ display: "none" }}
+            onChange={e => {
+              const files = Array.from(e.target.files ?? []);
+              if (files.length) onUpload(files);
+              e.target.value = "";
+            }}
+          />
+        </label>
       </div>
-      <div style={{ fontFamily: "var(--serif)", fontStyle: "italic", color: "var(--ink-mute)", fontSize: 15, marginBottom: 20 }}>
-        Storage is not wired to Supabase yet. The list below is illustrative.
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18 }}>
-        {figs.map((f, i) => (
-          <div key={i} style={{ border: "1px solid var(--rule)", background: "var(--vellum-warm)" }}>
-            <div style={{ height: 140, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid var(--rule)", background: "repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(20,23,42,0.04) 6px, rgba(20,23,42,0.04) 7px)" }}>
-              <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--ink-mute)", letterSpacing: "0.1em" }}>{f.n.split(".").pop()?.toUpperCase()}</span>
-            </div>
-            <div style={{ padding: "12px 14px" }}>
-              <div style={{ fontFamily: "var(--serif)", fontSize: 15, color: "var(--ink)" }}>{f.n}</div>
-              <div style={{ fontFamily: "var(--sans)", fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-mute)", marginTop: 6, display: "flex", justifyContent: "space-between" }}>
-                <span>{f.post}</span><span>{f.size} · {f.date}</span>
+      {err && (
+        <div style={{ fontFamily: "var(--serif)", fontStyle: "italic", color: "#a44", fontSize: 14, margin: "0 0 16px" }}>
+          {err}
+        </div>
+      )}
+      {media.length === 0 ? (
+        <div style={{ padding: "60px 20px", textAlign: "center", fontFamily: "var(--serif)", fontStyle: "italic", color: "var(--ink-mute)" }}>
+          No files yet. Upload an SVG, image, or PDF to get started.
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18 }}>
+          {media.map(f => (
+            <div key={f.name} style={{ border: "1px solid var(--rule)", background: "var(--vellum-warm)" }}>
+              <div style={{ height: 140, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid var(--rule)", background: "repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(20,23,42,0.04) 6px, rgba(20,23,42,0.04) 7px)", overflow: "hidden" }}>
+                {isImage(f.name) ? (
+                  <Image
+                    src={f.url}
+                    alt={f.name}
+                    width={300}
+                    height={140}
+                    unoptimized
+                    style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                  />
+                ) : (
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--ink-mute)", letterSpacing: "0.1em" }}>
+                    {f.name.split(".").pop()?.toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div style={{ padding: "12px 14px" }}>
+                <div style={{ fontFamily: "var(--serif)", fontSize: 15, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
+                <div style={{ fontFamily: "var(--sans)", fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-mute)", marginTop: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>{formatBytes(f.size)} · {formatRelative(f.updatedAt)}</span>
+                  <button className="kebab" title="Delete" onClick={() => onDelete(f.name)}>×</button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }
 
-function AdminTags({ posts }: { posts: Post[] }) {
+function AdminTags({ tags, posts }: { tags: string[]; posts: Post[] }) {
+  const router = useRouter();
+  const [newTag, setNewTag] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const onAdd = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newTag.trim()) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await addTag(newTag.trim());
+      setNewTag("");
+      router.refresh();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to add tag.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onDelete = async (name: string) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await removeTag(name);
+      router.refresh();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to delete tag.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <>
       <div className="admin-bar">
         <div><div className="crumbs">Editorial · Taxonomy</div><h2>Tags</h2></div>
+        <form onSubmit={onAdd} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            className="admin-search"
+            placeholder="New tag name…"
+            value={newTag}
+            onChange={e => setNewTag(e.target.value)}
+            style={{ width: 200 }}
+          />
+          <button className="btn" type="submit" disabled={busy || !newTag.trim()}>+ Add</button>
+        </form>
       </div>
+      {err && (
+        <div style={{ fontFamily: "var(--serif)", fontStyle: "italic", color: "#a44", fontSize: 14, margin: "0 0 16px" }}>
+          {err}
+        </div>
+      )}
       <div className="admin-table">
         <div className="row head" style={{ gridTemplateColumns: "1fr 100px 140px 40px" }}>
           <div>Name</div><div>Entries</div><div>Last used</div><div></div>
         </div>
-        {TAGS.map(t => {
+        {tags.map(t => {
           const count = posts.filter(p => p.tag === t && p.status === "published").length;
           const latest = posts.filter(p => p.tag === t).sort((a, b) => +new Date(b.date) - +new Date(a.date))[0];
+          const inUse = count > 0;
           return (
             <div className="row" key={t} style={{ gridTemplateColumns: "1fr 100px 140px 40px" }}>
               <div className="t" style={{ fontStyle: "italic" }}>{t}</div>
               <div className="d">{count} entries</div>
               <div className="d">{latest ? formatDate(latest.date) : "—"}</div>
-              <div></div>
+              <div>
+                <button
+                  className="kebab"
+                  title={inUse ? "Cannot delete — tag in use" : "Delete tag"}
+                  disabled={inUse || busy}
+                  onClick={() => {
+                    if (confirm(`Delete tag "${t}"?`)) onDelete(t);
+                  }}
+                  style={{ opacity: inUse ? 0.3 : 1 }}
+                >×</button>
+              </div>
             </div>
           );
         })}
+      </div>
+    </>
+  );
+}
+
+function AdminAbout({ page }: { page: Page }) {
+  const router = useRouter();
+  const [title, setTitle] = useState(page.title);
+  const [content, setContent] = useState(page.content);
+  const [busy, setBusy] = useState(false);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const onSave = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await savePageContent(page.slug, title, content);
+      setSavedAt(new Date());
+      router.refresh();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Save failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="admin-bar">
+        <div><div className="crumbs">Editorial · About Page</div><h2>{title || "About"}</h2></div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <span className="editor-meta-line" style={{ fontSize: 10, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+            {busy ? "SAVING…" : savedAt ? `SAVED ${savedAt.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}` : "UNSAVED"}
+          </span>
+          <button className="btn gold" onClick={onSave} disabled={busy}>Save</button>
+        </div>
+      </div>
+      {err && (
+        <div style={{ fontFamily: "var(--serif)", fontStyle: "italic", color: "#a44", fontSize: 14, margin: "0 0 16px" }}>
+          {err}
+        </div>
+      )}
+      <div className="field"><label>Page title</label><input value={title} onChange={e => setTitle(e.target.value)} /></div>
+      <div className="field">
+        <label>Body (Markdown — paragraphs, &gt; blockquotes, ::: facts blocks with key | value)</label>
+        <textarea
+          value={content}
+          onChange={e => setContent(e.target.value)}
+          rows={24}
+          style={{ fontFamily: "var(--mono)", fontSize: 13, lineHeight: 1.7, minHeight: 500 }}
+        />
+      </div>
+      <div style={{ fontFamily: "var(--serif)", fontStyle: "italic", color: "var(--ink-mute)", fontSize: 13, marginTop: 12 }}>
+        Changes appear on <a href="/about">/about</a> after saving.
       </div>
     </>
   );
@@ -609,4 +823,34 @@ function AdminSettings() {
       </div>
     </>
   );
+}
+
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const result = r.result as string;
+      const comma = result.indexOf(",");
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
+
+function safeName(name: string) {
+  const cleaned = name.replace(/[^A-Za-z0-9._-]+/g, "-");
+  return `${Date.now()}-${cleaned}`;
+}
+
+function isImage(name: string) {
+  return /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(name);
+}
+
+function formatBytes(n: number) {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} kB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
