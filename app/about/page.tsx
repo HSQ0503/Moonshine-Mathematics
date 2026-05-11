@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AboutPage() {
   const page = await getPage("about");
-  const title = page?.title ?? "About this journal";
+  const title = page?.title ?? "About";
   const content = page?.content ?? "";
 
   return (
@@ -18,7 +18,7 @@ export default async function AboutPage() {
           <PageContent content={content} />
         ) : (
           <p style={{ fontStyle: "italic", color: "var(--ink-mute)" }}>
-            The about page hasn&apos;t been written yet. Sign in to the editorial panel to add content.
+            Nothing here yet.
           </p>
         )}
       </article>

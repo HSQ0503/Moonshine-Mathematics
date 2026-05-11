@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type ChangeEvent, type DragEvent, type FormEvent } from "react";
-import { BigMoon } from "@/components/Moon";
 import { ThmBlock, K } from "@/components/Math";
 import { formatDate, formatRelative, type Post } from "@/lib/data";
 import type { ActivityRow, MediaFile, Page } from "@/lib/db";
@@ -81,11 +80,8 @@ function AdminSide({ section, setSection }: { section: Section; setSection: (s: 
   return (
     <aside className="admin-side">
       <div className="brand">
-        <div className="glyph">
-          <BigMoon size={18} />
-          <h1>Moonshine</h1>
-        </div>
-        <div className="latin">editorial · admin</div>
+        <h1>Moonshine</h1>
+        <div className="latin">Editor</div>
       </div>
       <nav className="admin-nav">
         {items.map(it => (

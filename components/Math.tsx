@@ -60,11 +60,3 @@ export function Footnotes({ items }: { items: Array<[number, ReactNode]> }) {
   );
 }
 
-export function MarginNote({ marker, children }: { marker: string; children: ReactNode }) {
-  return (
-    <span className="marginnote">
-      <span className="marker">{marker}</span>
-      {children}
-    </span>
-  );
-}

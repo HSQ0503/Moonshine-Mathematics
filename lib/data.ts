@@ -14,12 +14,6 @@ export type Post = {
   body?: string;
 };
 
-export const author = {
-  name: "J. Calder",
-  initials: "JC",
-  bio: "Self-studying mathematics by moonlight. Currently working through linear algebra — Axler, mostly, with Strang for intuition and Halmos for old-world clarity.",
-};
-
 export function formatDate(iso: string) {
   const d = new Date(iso);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -42,25 +36,3 @@ export function formatRelative(iso: string) {
   if (diffDay < 7) return `${diffDay}d ago`;
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
-
-const SYNODIC = 29.530588853;
-const REF_NEW_MOON = Date.UTC(2000, 0, 6, 18, 14, 0);
-
-export function moonPhase(date: Date) {
-  const diff = (date.getTime() - REF_NEW_MOON) / 86400000;
-  const phase = ((diff % SYNODIC) + SYNODIC) % SYNODIC;
-  return phase / SYNODIC;
-}
-
-export function phaseIndex(date: Date) {
-  return Math.round(moonPhase(date) * 8) % 8;
-}
-
-export function phaseName(idx: number) {
-  return [
-    "New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous",
-    "Full Moon", "Waning Gibbous", "Last Quarter", "Waning Crescent",
-  ][idx];
-}
-
-export const TODAY = new Date(2026, 4, 11);
