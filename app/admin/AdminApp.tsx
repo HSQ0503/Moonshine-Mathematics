@@ -15,7 +15,7 @@ import {
   type PostInput,
 } from "./actions";
 
-type Section = "dashboard" | "posts" | "editor" | "media" | "tags" | "about" | "settings";
+type Section = "dashboard" | "posts" | "editor" | "media" | "tags" | "home" | "about" | "settings";
 
 const EDITOR_TEMPLATE = `# The shape of the question
 
@@ -42,9 +42,10 @@ type Props = {
   initialActivity: ActivityRow[];
   initialMedia: MediaFile[];
   aboutPage: Page;
+  homePage: Page;
 };
 
-export function AdminApp({ initialPosts, initialTags, initialActivity, initialMedia, aboutPage }: Props) {
+export function AdminApp({ initialPosts, initialTags, initialActivity, initialMedia, aboutPage, homePage }: Props) {
   const [section, setSection] = useState<Section>("dashboard");
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -60,7 +61,8 @@ export function AdminApp({ initialPosts, initialTags, initialActivity, initialMe
         {section === "editor" && <AdminEditor posts={initialPosts} tags={initialTags} media={initialMedia} postId={editingId} setSection={setSection} />}
         {section === "media" && <AdminMedia media={initialMedia} />}
         {section === "tags" && <AdminTags tags={initialTags} posts={initialPosts} />}
-        {section === "about" && <AdminAbout page={aboutPage} />}
+        {section === "home" && <AdminPageEditor page={homePage} crumb="Home Page" publicPath="/" hint='Renders as the lede above the post list on the home page. Supports paragraphs, > blockquotes, and ::: facts blocks.' />}
+        {section === "about" && <AdminPageEditor page={aboutPage} crumb="About Page" publicPath="/about" hint='Renders on /about. Supports paragraphs, > blockquotes, and ::: facts blocks with "key | value" lines.' />}
         {section === "settings" && <AdminSettings />}
       </main>
     </div>
@@ -74,6 +76,7 @@ function AdminSide({ section, setSection }: { section: Section; setSection: (s: 
     { k: "editor",    label: "New Entry" },
     { k: "media",     label: "Media" },
     { k: "tags",      label: "Tags" },
+    { k: "home",      label: "Home Page" },
     { k: "about",     label: "About Page" },
     { k: "settings",  label: "Settings" },
   ];
@@ -748,7 +751,7 @@ function AdminTags({ tags, posts }: { tags: string[]; posts: Post[] }) {
   );
 }
 
-function AdminAbout({ page }: { page: Page }) {
+function AdminPageEditor({ page, crumb, publicPath, hint }: { page: Page; crumb: string; publicPath: string; hint: string }) {
   const router = useRouter();
   const [title, setTitle] = useState(page.title);
   const [content, setContent] = useState(page.content);
@@ -773,7 +776,7 @@ function AdminAbout({ page }: { page: Page }) {
   return (
     <>
       <div className="admin-bar">
-        <div><div className="crumbs">Editorial · About Page</div><h2>{title || "About"}</h2></div>
+        <div><div className="crumbs">Editorial · {crumb}</div><h2>{title || crumb}</h2></div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <span className="editor-meta-line" style={{ fontSize: 10, letterSpacing: "0.05em", textTransform: "uppercase" }}>
             {busy ? "SAVING…" : savedAt ? `SAVED ${savedAt.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}` : "UNSAVED"}
@@ -788,7 +791,7 @@ function AdminAbout({ page }: { page: Page }) {
       )}
       <div className="field"><label>Page title</label><input value={title} onChange={e => setTitle(e.target.value)} /></div>
       <div className="field">
-        <label>Body (Markdown — paragraphs, &gt; blockquotes, ::: facts blocks with key | value)</label>
+        <label>Body</label>
         <textarea
           value={content}
           onChange={e => setContent(e.target.value)}
@@ -797,7 +800,7 @@ function AdminAbout({ page }: { page: Page }) {
         />
       </div>
       <div style={{ fontFamily: "var(--serif)", fontStyle: "italic", color: "var(--ink-mute)", fontSize: 13, marginTop: 12 }}>
-        Changes appear on <a href="/about">/about</a> after saving.
+        {hint} Changes appear on <a href={publicPath}>{publicPath}</a> after saving.
       </div>
     </>
   );

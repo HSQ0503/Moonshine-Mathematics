@@ -84,6 +84,8 @@ button { font-family: inherit; cursor: pointer; }
   font-size: 18px;
   margin: 0 0 56px;
 }
+.lede p { margin: 0 0 12px; }
+.lede p:last-child { margin-bottom: 0; }
 
 .post-list { list-style: none; padding: 0; margin: 0; }
 .post-list li {
@@ -124,6 +126,16 @@ button { font-family: inherit; cursor: pointer; }
   margin-top: 4px;
   color: var(--ink-faint);
 }
+
+.see-all {
+  margin: 32px 0 0;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-mute);
+  text-align: right;
+}
+.see-all a { text-decoration: none; color: var(--ink-mute); }
+.see-all a:hover { color: var(--moon); }
 
 /* ── Article ──────────────────────────────────────────── */
 
