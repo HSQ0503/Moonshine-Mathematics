@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Masthead, Footer } from "@/components/Chrome";
 import { K, ThmBlock, FNote, Footnotes } from "@/components/Math";
+import { PostBody } from "@/components/PostBody";
 import { formatDate } from "@/lib/data";
 import { getPostBySlug } from "@/lib/db";
 
@@ -11,7 +12,8 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
   const post = await getPostBySlug(slug);
   if (!post || post.status !== "published") notFound();
 
-  const isFlagship = post.slug === "spectral-theorem-self-adjoint";
+  const hasBody = post.body && post.body.trim().length > 0;
+  const isLegacyFlagship = !hasBody && post.slug === "spectral-theorem-self-adjoint";
 
   return (
     <div className="shell">
@@ -26,7 +28,15 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
           </div>
         </header>
 
-        {isFlagship ? <FlagshipBody /> : <ShortBody excerpt={post.excerpt} />}
+        {hasBody ? (
+          <PostBody src={post.body!} />
+        ) : isLegacyFlagship ? (
+          <FlagshipBody />
+        ) : (
+          <p style={{ fontStyle: "italic", color: "var(--ink-mute)" }}>
+            This entry has no body yet.
+          </p>
+        )}
       </article>
       <Footer />
     </div>
@@ -168,10 +178,3 @@ function FlagshipBody() {
   );
 }
 
-function ShortBody({ excerpt }: { excerpt: string }) {
-  return (
-    <p style={{ fontSize: 18, fontStyle: "italic", color: "var(--ink-mute)" }}>
-      {excerpt}
-    </p>
-  );
-}
