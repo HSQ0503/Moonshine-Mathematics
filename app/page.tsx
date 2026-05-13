@@ -42,6 +42,7 @@ export default async function HomePage() {
           <ul className="post-list">
             {recent.map(p => (
               <li key={p.id}>
+                <div className="post-list-num">№ {p.number}</div>
                 <div className="post-list-main">
                   <Link href={`/post/${p.slug}`} className="post-list-title">{p.title}</Link>
                   <div className="post-list-sub">{p.subtitle}</div>

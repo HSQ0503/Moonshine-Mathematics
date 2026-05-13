@@ -40,6 +40,7 @@ export function ArchiveView({ posts, tags }: { posts: Post[]; tags: string[] }) 
           <ul>
             {list.map(p => (
               <li key={p.id}>
+                <span className="n">{p.number}</span>
                 <span className="d">
                   {new Date(p.date).toLocaleDateString("en-US", { month: "short", day: "2-digit" }).toUpperCase()}
                 </span>
