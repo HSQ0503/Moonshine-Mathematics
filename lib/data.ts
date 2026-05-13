@@ -14,6 +14,59 @@ export type Post = {
   body?: string;
 };
 
+const ROMAN: Record<string, number> = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+function romanToInt(s: string): number {
+  let total = 0;
+  for (let i = 0; i < s.length; i++) {
+    const cur = ROMAN[s[i]] ?? 0;
+    const next = ROMAN[s[i + 1]] ?? 0;
+    total += cur < next ? -cur : cur;
+  }
+  return total;
+}
+
+export function entryIndex(number: string): number {
+  const digits = number.match(/\d+/);
+  if (digits) return parseInt(digits[0], 10);
+  const upper = number.toUpperCase().replace(/[^IVXLCDM]/g, "");
+  return upper ? romanToInt(upper) : 0;
+}
+
+export function phaseFor(number: string): 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 {
+  const n = entryIndex(number);
+  return (((n - 1) % 8 + 8) % 8) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+}
+
+export function cycleFor(number: string): number {
+  const n = entryIndex(number);
+  return Math.max(1, Math.floor((n - 1) / 8) + 1);
+}
+
+const ROMAN_TABLE: Array<[string, number]> = [
+  ["M", 1000], ["CM", 900], ["D", 500], ["CD", 400],
+  ["C", 100], ["XC", 90], ["L", 50], ["XL", 40],
+  ["X", 10], ["IX", 9], ["V", 5], ["IV", 4], ["I", 1],
+];
+
+export function toRoman(num: number): string {
+  if (num <= 0) return "";
+  let n = Math.floor(num);
+  let out = "";
+  for (const [glyph, value] of ROMAN_TABLE) {
+    while (n >= value) {
+      out += glyph;
+      n -= value;
+    }
+  }
+  return out;
+}
+
+export function romanize(number: string): string {
+  if (/^[MDCLXVI]+$/i.test(number)) return number.toUpperCase();
+  const idx = entryIndex(number);
+  return idx > 0 ? toRoman(idx) : number;
+}
+
 export function formatDate(iso: string) {
   const d = new Date(iso);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });

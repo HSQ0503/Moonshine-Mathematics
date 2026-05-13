@@ -818,6 +818,9 @@ function AdminSettings({ settings }: { settings: Settings }) {
   const [authorInitials, setAuthorInitials] = useState(settings.authorInitials);
   const [deskLabel, setDeskLabel] = useState(settings.deskLabel);
   const [deskSublabel, setDeskSublabel] = useState(settings.deskSublabel);
+  const [currentsReading, setCurrentsReading] = useState(settings.currentsReading);
+  const [currentsResearch, setCurrentsResearch] = useState(settings.currentsResearch);
+  const [currentsWriting, setCurrentsWriting] = useState(settings.currentsWriting);
   const [busy, setBusy] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -831,6 +834,9 @@ function AdminSettings({ settings }: { settings: Settings }) {
         authorInitials: (authorInitials.trim() || authorName.trim().slice(0, 2) || "AN").toUpperCase(),
         deskLabel: deskLabel.trim(),
         deskSublabel: deskSublabel.trim(),
+        currentsReading: currentsReading.trim(),
+        currentsResearch: currentsResearch.trim(),
+        currentsWriting: currentsWriting.trim(),
       });
       setSavedAt(new Date());
       router.refresh();
@@ -868,18 +874,30 @@ function AdminSettings({ settings }: { settings: Settings }) {
           <input value={authorInitials} onChange={e => setAuthorInitials(e.target.value)} placeholder="e.g. JC" maxLength={4} style={{ maxWidth: 120 }} />
         </div>
 
-        <div className="section-label" style={{ margin: "24px 0 12px" }}>On the desk</div>
+        <div className="section-label" style={{ margin: "24px 0 12px" }}>Currents (home page)</div>
         <div className="field">
-          <label>Label (shown on dashboard)</label>
+          <label>On the desk</label>
           <input value={deskLabel} onChange={e => setDeskLabel(e.target.value)} placeholder="e.g. Axler" />
         </div>
         <div className="field">
-          <label>Sublabel</label>
+          <label>On the desk — sublabel</label>
           <input value={deskSublabel} onChange={e => setDeskSublabel(e.target.value)} placeholder="e.g. ch. 7 · self-adjoint" />
+        </div>
+        <div className="field">
+          <label>Reading</label>
+          <input value={currentsReading} onChange={e => setCurrentsReading(e.target.value)} placeholder="e.g. Halmos, Finite-Dimensional Vector Spaces" />
+        </div>
+        <div className="field">
+          <label>Research</label>
+          <input value={currentsResearch} onChange={e => setCurrentsResearch(e.target.value)} placeholder="e.g. Spectral theorem in infinite dimensions" />
+        </div>
+        <div className="field">
+          <label>Writing</label>
+          <input value={currentsWriting} onChange={e => setCurrentsWriting(e.target.value)} placeholder="e.g. Notes on tensor products" />
         </div>
       </div>
       <div style={{ fontFamily: "var(--serif)", fontStyle: "italic", color: "var(--ink-mute)", fontSize: 13, marginTop: 12 }}>
-        Author name appears on every post byline. &ldquo;On the desk&rdquo; shows on the admin dashboard.
+        Author name appears on every post byline. Currents fields show on the home page; leave any blank to hide that row.
       </div>
     </>
   );

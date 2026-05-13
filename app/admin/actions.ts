@@ -125,7 +125,15 @@ export async function removeFile(name: string) {
   revalidatePath("/admin");
 }
 
-export async function saveSettings(input: { authorName: string; authorInitials: string; deskLabel: string; deskSublabel: string }) {
+export async function saveSettings(input: {
+  authorName: string;
+  authorInitials: string;
+  deskLabel: string;
+  deskSublabel: string;
+  currentsReading: string;
+  currentsResearch: string;
+  currentsWriting: string;
+}) {
   await requireUser();
   await updateSettings(input);
   await logActivity("Edited", "Journal settings");

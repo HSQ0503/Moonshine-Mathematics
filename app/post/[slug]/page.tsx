@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { Masthead, Footer } from "@/components/Chrome";
+import { FloatingScrollMoon } from "@/components/ScrollMoon";
 import { K, ThmBlock, FNote, Footnotes } from "@/components/Math";
 import { PostBody } from "@/components/PostBody";
-import { formatDate } from "@/lib/data";
+import { Moon, phaseName } from "@/components/Moon";
+import { formatDate, phaseFor, cycleFor, toRoman, romanize } from "@/lib/data";
 import { getPostBySlug, getSettings } from "@/lib/db";
 
 type Params = { slug: string };
@@ -18,12 +20,24 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
   const hasBody = post.body && post.body.trim().length > 0;
   const isLegacyFlagship = !hasBody && post.slug === "spectral-theorem-self-adjoint";
 
+  const ph = phaseFor(post.number);
+  const cy = cycleFor(post.number);
+
   return (
+    <>
+      <FloatingScrollMoon />
     <div className="shell">
       <Masthead page="post" />
       <article className="article">
         <header>
-          <div className="eyebrow">{post.tag} · {formatDate(post.date)}</div>
+          <div className="eyebrow">
+            <span className="eyebrow-moon"><Moon phase={ph} size={16} tone={ph === 4 ? "gold" : "vellum"} /></span>
+            <span>Entry № {romanize(post.number)} · Cycle {toRoman(cy)} · {phaseName(ph)}</span>
+            <span className="eyebrow-sep">·</span>
+            <span>{post.tag}</span>
+            <span className="eyebrow-sep">·</span>
+            <span>{formatDate(post.date)}</span>
+          </div>
           <h1>{post.title}</h1>
           <p className="subtitle">{post.subtitle}</p>
           <div className="byline">
@@ -43,6 +57,8 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
       </article>
       <Footer />
     </div>
+    </>
+
   );
 }
 

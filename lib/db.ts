@@ -246,6 +246,9 @@ export type Settings = {
   authorInitials: string;
   deskLabel: string;
   deskSublabel: string;
+  currentsReading: string;
+  currentsResearch: string;
+  currentsWriting: string;
 };
 
 const DEFAULT_SETTINGS: Settings = {
@@ -253,21 +256,37 @@ const DEFAULT_SETTINGS: Settings = {
   authorInitials: "JC",
   deskLabel: "",
   deskSublabel: "",
+  currentsReading: "",
+  currentsResearch: "",
+  currentsWriting: "",
 };
 
 export async function getSettings(): Promise<Settings> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const full = await supabase
     .from("journal_settings")
-    .select("author_name, author_initials, desk_label, desk_sublabel")
+    .select("author_name, author_initials, desk_label, desk_sublabel, currents_reading, currents_research, currents_writing")
     .eq("id", 1)
     .maybeSingle();
-  if (error || !data) return DEFAULT_SETTINGS;
+  let data = full.data as Record<string, string | null> | null;
+  if (full.error) {
+    const fallback = await supabase
+      .from("journal_settings")
+      .select("author_name, author_initials, desk_label, desk_sublabel")
+      .eq("id", 1)
+      .maybeSingle();
+    if (fallback.error || !fallback.data) return DEFAULT_SETTINGS;
+    data = fallback.data as Record<string, string | null>;
+  }
+  if (!data) return DEFAULT_SETTINGS;
   return {
     authorName: data.author_name ?? DEFAULT_SETTINGS.authorName,
     authorInitials: data.author_initials ?? DEFAULT_SETTINGS.authorInitials,
     deskLabel: data.desk_label ?? "",
     deskSublabel: data.desk_sublabel ?? "",
+    currentsReading: data.currents_reading ?? "",
+    currentsResearch: data.currents_research ?? "",
+    currentsWriting: data.currents_writing ?? "",
   };
 }
 
@@ -278,6 +297,9 @@ export async function updateSettings(patch: Partial<Settings>): Promise<void> {
   if (patch.authorInitials !== undefined) row.author_initials = patch.authorInitials;
   if (patch.deskLabel !== undefined) row.desk_label = patch.deskLabel;
   if (patch.deskSublabel !== undefined) row.desk_sublabel = patch.deskSublabel;
+  if (patch.currentsReading !== undefined) row.currents_reading = patch.currentsReading;
+  if (patch.currentsResearch !== undefined) row.currents_research = patch.currentsResearch;
+  if (patch.currentsWriting !== undefined) row.currents_writing = patch.currentsWriting;
   const { error } = await supabase.from("journal_settings").upsert(row, { onConflict: "id" });
   if (error) throw error;
 }
