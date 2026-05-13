@@ -144,7 +144,11 @@ function AdminDashboard({ posts, activity, settings, openEditor, setSection }: {
         <div className="stat"><div className="label">Published</div><div className="value">{published.length}</div><div className="delta">live in journal</div></div>
         <div className="stat"><div className="label">Drafts</div><div className="value">{drafts.length}</div><div className="delta">in progress</div></div>
         <div className="stat"><div className="label">Total readers</div><div className="value">{totalViews.toLocaleString()}</div><div className="delta">cumulative</div></div>
-        <div className="stat"><div className="label">On the desk</div><div className="value">Axler</div><div className="delta">ch. 7 · self-adjoint</div></div>
+        <div className="stat">
+          <div className="label">On the desk</div>
+          <div className="value">{settings.deskLabel || "—"}</div>
+          <div className="delta">{settings.deskSublabel || "edit in settings"}</div>
+        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 24 }}>
@@ -812,6 +816,8 @@ function AdminSettings({ settings }: { settings: Settings }) {
   const router = useRouter();
   const [authorName, setAuthorName] = useState(settings.authorName);
   const [authorInitials, setAuthorInitials] = useState(settings.authorInitials);
+  const [deskLabel, setDeskLabel] = useState(settings.deskLabel);
+  const [deskSublabel, setDeskSublabel] = useState(settings.deskSublabel);
   const [busy, setBusy] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -823,6 +829,8 @@ function AdminSettings({ settings }: { settings: Settings }) {
       await saveSettings({
         authorName: authorName.trim() || "Anonymous",
         authorInitials: (authorInitials.trim() || authorName.trim().slice(0, 2) || "AN").toUpperCase(),
+        deskLabel: deskLabel.trim(),
+        deskSublabel: deskSublabel.trim(),
       });
       setSavedAt(new Date());
       router.refresh();
@@ -850,17 +858,28 @@ function AdminSettings({ settings }: { settings: Settings }) {
         </div>
       )}
       <div style={{ maxWidth: 480 }}>
+        <div className="section-label" style={{ margin: "0 0 12px" }}>Author</div>
         <div className="field">
           <label>Author name</label>
           <input value={authorName} onChange={e => setAuthorName(e.target.value)} placeholder="Your display name" />
         </div>
         <div className="field">
-          <label>Author initials (used in the sidebar avatar)</label>
+          <label>Author initials (sidebar avatar)</label>
           <input value={authorInitials} onChange={e => setAuthorInitials(e.target.value)} placeholder="e.g. JC" maxLength={4} style={{ maxWidth: 120 }} />
+        </div>
+
+        <div className="section-label" style={{ margin: "24px 0 12px" }}>On the desk</div>
+        <div className="field">
+          <label>Label (shown on dashboard)</label>
+          <input value={deskLabel} onChange={e => setDeskLabel(e.target.value)} placeholder="e.g. Axler" />
+        </div>
+        <div className="field">
+          <label>Sublabel</label>
+          <input value={deskSublabel} onChange={e => setDeskSublabel(e.target.value)} placeholder="e.g. ch. 7 · self-adjoint" />
         </div>
       </div>
       <div style={{ fontFamily: "var(--serif)", fontStyle: "italic", color: "var(--ink-mute)", fontSize: 13, marginTop: 12 }}>
-        Used as the byline on every post and in the editor preview.
+        Author name appears on every post byline. &ldquo;On the desk&rdquo; shows on the admin dashboard.
       </div>
     </>
   );

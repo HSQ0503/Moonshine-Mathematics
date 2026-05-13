@@ -192,7 +192,8 @@ export async function getPage(slug: string): Promise<Page | null> {
 
 export async function updatePage(slug: string, patch: { title?: string; content?: string }): Promise<void> {
   const supabase = await createClient();
-  const { error } = await supabase.from("pages").update(patch).eq("slug", slug);
+  const row = { slug, title: patch.title ?? "", content: patch.content ?? "" };
+  const { error } = await supabase.from("pages").upsert(row, { onConflict: "slug" });
   if (error) throw error;
 }
 
@@ -240,30 +241,43 @@ export async function deleteMedia(name: string): Promise<void> {
 
 // ─── settings ────────────────────────────────────────────────────────────────
 
-export type Settings = { authorName: string; authorInitials: string };
+export type Settings = {
+  authorName: string;
+  authorInitials: string;
+  deskLabel: string;
+  deskSublabel: string;
+};
 
-const DEFAULT_SETTINGS: Settings = { authorName: "J. Calder", authorInitials: "JC" };
+const DEFAULT_SETTINGS: Settings = {
+  authorName: "J. Calder",
+  authorInitials: "JC",
+  deskLabel: "",
+  deskSublabel: "",
+};
 
 export async function getSettings(): Promise<Settings> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("journal_settings")
-    .select("author_name, author_initials")
+    .select("author_name, author_initials, desk_label, desk_sublabel")
     .eq("id", 1)
     .maybeSingle();
-  if (error) return DEFAULT_SETTINGS;
-  if (!data) return DEFAULT_SETTINGS;
+  if (error || !data) return DEFAULT_SETTINGS;
   return {
     authorName: data.author_name ?? DEFAULT_SETTINGS.authorName,
     authorInitials: data.author_initials ?? DEFAULT_SETTINGS.authorInitials,
+    deskLabel: data.desk_label ?? "",
+    deskSublabel: data.desk_sublabel ?? "",
   };
 }
 
 export async function updateSettings(patch: Partial<Settings>): Promise<void> {
   const supabase = await createClient();
-  const row: Record<string, string> = {};
+  const row: Record<string, string | number> = { id: 1 };
   if (patch.authorName !== undefined) row.author_name = patch.authorName;
   if (patch.authorInitials !== undefined) row.author_initials = patch.authorInitials;
-  const { error } = await supabase.from("journal_settings").update(row).eq("id", 1);
+  if (patch.deskLabel !== undefined) row.desk_label = patch.deskLabel;
+  if (patch.deskSublabel !== undefined) row.desk_sublabel = patch.deskSublabel;
+  const { error } = await supabase.from("journal_settings").upsert(row, { onConflict: "id" });
   if (error) throw error;
 }

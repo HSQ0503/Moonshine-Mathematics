@@ -96,12 +96,17 @@ export async function removeTag(name: string) {
   revalidatePath("/archive");
 }
 
+function pathForPageSlug(slug: string) {
+  if (slug === "home") return "/";
+  return `/${slug}`;
+}
+
 export async function savePageContent(slug: string, title: string, content: string) {
   await requireUser();
   await updatePage(slug, { title, content });
   await logActivity("Edited", `Page: ${title}`);
   revalidatePath("/admin");
-  revalidatePath(`/${slug}`);
+  revalidatePath(pathForPageSlug(slug));
 }
 
 export async function uploadFile(input: { name: string; data: string; contentType: string }) {
@@ -120,12 +125,11 @@ export async function removeFile(name: string) {
   revalidatePath("/admin");
 }
 
-export async function saveSettings(input: { authorName: string; authorInitials: string }) {
+export async function saveSettings(input: { authorName: string; authorInitials: string; deskLabel: string; deskSublabel: string }) {
   await requireUser();
   await updateSettings(input);
   await logActivity("Edited", "Journal settings");
-  revalidatePath("/");
-  revalidatePath("/admin");
+  revalidatePath("/", "layout");
 }
 
 export async function signOut() {
