@@ -2,14 +2,15 @@ import Link from "next/link";
 import { Masthead, Footer } from "@/components/Chrome";
 import { PageContent } from "@/components/PageContent";
 import { formatDate } from "@/lib/data";
-import { getPublishedPosts, getPage } from "@/lib/db";
+import { getPublishedPosts, getPage, getSettings } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [posts, home] = await Promise.all([
+  const [posts, home, settings] = await Promise.all([
     getPublishedPosts(),
     getPage("home"),
+    getSettings(),
   ]);
 
   const RECENT_COUNT = 8;
@@ -23,6 +24,13 @@ export default async function HomePage() {
         <div className="lede">
           <PageContent content={home.content} />
         </div>
+      )}
+      {settings.deskLabel && (
+        <aside className="on-the-desk">
+          <span className="label">On the desk</span>
+          <span className="value">{settings.deskLabel}</span>
+          {settings.deskSublabel && <span className="detail">{settings.deskSublabel}</span>}
+        </aside>
       )}
 
       {recent.length === 0 ? (

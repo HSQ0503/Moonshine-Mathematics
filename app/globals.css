@@ -137,6 +137,52 @@ button { font-family: inherit; cursor: pointer; }
 .see-all a { text-decoration: none; color: var(--ink-mute); }
 .see-all a:hover { color: var(--moon); }
 
+.on-the-desk {
+  margin: 0 0 40px;
+  padding: 14px 0;
+  border-top: 1px solid var(--rule-soft);
+  border-bottom: 1px solid var(--rule-soft);
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--ink-mute);
+}
+.on-the-desk .label {
+  font-family: var(--sans);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  flex-shrink: 0;
+}
+.on-the-desk .value {
+  font-style: italic;
+  color: var(--ink);
+}
+.on-the-desk .value::before {
+  content: "";
+  display: inline-block;
+  width: 18px;
+  height: 1px;
+  background: var(--rule);
+  vertical-align: middle;
+  margin-right: 12px;
+  margin-left: -2px;
+}
+.on-the-desk .detail {
+  color: var(--ink-faint);
+  font-style: italic;
+  font-size: 14px;
+}
+.on-the-desk .detail::before {
+  content: "·";
+  margin-right: 10px;
+  color: var(--rule);
+}
+
 /* ── Article ──────────────────────────────────────────── */
 
 .article header { margin-bottom: 40px; }
