@@ -9,6 +9,7 @@ import {
   updatePage,
   logActivity,
   uploadMedia, deleteMedia,
+  updateSettings,
 } from "@/lib/db";
 import type { Post } from "@/lib/data";
 
@@ -116,6 +117,14 @@ export async function removeFile(name: string) {
   await requireUser();
   await deleteMedia(name);
   await logActivity("Removed", `Media: ${name}`);
+  revalidatePath("/admin");
+}
+
+export async function saveSettings(input: { authorName: string; authorInitials: string }) {
+  await requireUser();
+  await updateSettings(input);
+  await logActivity("Edited", "Journal settings");
+  revalidatePath("/");
   revalidatePath("/admin");
 }
 

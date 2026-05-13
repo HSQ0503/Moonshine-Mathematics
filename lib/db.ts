@@ -237,3 +237,33 @@ export async function deleteMedia(name: string): Promise<void> {
   const { error } = await supabase.storage.from(BUCKET).remove([name]);
   if (error) throw error;
 }
+
+// ─── settings ────────────────────────────────────────────────────────────────
+
+export type Settings = { authorName: string; authorInitials: string };
+
+const DEFAULT_SETTINGS: Settings = { authorName: "J. Calder", authorInitials: "JC" };
+
+export async function getSettings(): Promise<Settings> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("journal_settings")
+    .select("author_name, author_initials")
+    .eq("id", 1)
+    .maybeSingle();
+  if (error) return DEFAULT_SETTINGS;
+  if (!data) return DEFAULT_SETTINGS;
+  return {
+    authorName: data.author_name ?? DEFAULT_SETTINGS.authorName,
+    authorInitials: data.author_initials ?? DEFAULT_SETTINGS.authorInitials,
+  };
+}
+
+export async function updateSettings(patch: Partial<Settings>): Promise<void> {
+  const supabase = await createClient();
+  const row: Record<string, string> = {};
+  if (patch.authorName !== undefined) row.author_name = patch.authorName;
+  if (patch.authorInitials !== undefined) row.author_initials = patch.authorInitials;
+  const { error } = await supabase.from("journal_settings").update(row).eq("id", 1);
+  if (error) throw error;
+}

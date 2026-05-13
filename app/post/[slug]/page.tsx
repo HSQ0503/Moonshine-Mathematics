@@ -3,13 +3,16 @@ import { Masthead, Footer } from "@/components/Chrome";
 import { K, ThmBlock, FNote, Footnotes } from "@/components/Math";
 import { PostBody } from "@/components/PostBody";
 import { formatDate } from "@/lib/data";
-import { getPostBySlug } from "@/lib/db";
+import { getPostBySlug, getSettings } from "@/lib/db";
 
 type Params = { slug: string };
 
 export default async function PostPage({ params }: { params: Promise<Params> }) {
   const { slug } = await params;
-  const post = await getPostBySlug(slug);
+  const [post, settings] = await Promise.all([
+    getPostBySlug(slug),
+    getSettings(),
+  ]);
   if (!post || post.status !== "published") notFound();
 
   const hasBody = post.body && post.body.trim().length > 0;
@@ -24,7 +27,7 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
           <h1>{post.title}</h1>
           <p className="subtitle">{post.subtitle}</p>
           <div className="byline">
-            J. Calder · {post.readingTime} min read
+            {settings.authorName} · {post.readingTime} min read
           </div>
         </header>
 

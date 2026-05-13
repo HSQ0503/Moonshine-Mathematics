@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, type ChangeEvent, type DragEvent, type FormEvent } from "react";
 import { ThmBlock, K } from "@/components/Math";
 import { formatDate, formatRelative, type Post } from "@/lib/data";
-import type { ActivityRow, MediaFile, Page } from "@/lib/db";
+import type { ActivityRow, MediaFile, Page, Settings } from "@/lib/db";
 import {
   savePost, removePost, signOut,
   addTag, removeTag,
   savePageContent,
   uploadFile, removeFile,
+  saveSettings,
   type PostInput,
 } from "./actions";
 
@@ -43,9 +44,10 @@ type Props = {
   initialMedia: MediaFile[];
   aboutPage: Page;
   homePage: Page;
+  settings: Settings;
 };
 
-export function AdminApp({ initialPosts, initialTags, initialActivity, initialMedia, aboutPage, homePage }: Props) {
+export function AdminApp({ initialPosts, initialTags, initialActivity, initialMedia, aboutPage, homePage, settings }: Props) {
   const [section, setSection] = useState<Section>("dashboard");
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -54,22 +56,22 @@ export function AdminApp({ initialPosts, initialTags, initialActivity, initialMe
 
   return (
     <div className="admin-shell">
-      <AdminSide section={section} setSection={switchSection} />
+      <AdminSide section={section} setSection={switchSection} settings={settings} />
       <main className="admin-main">
-        {section === "dashboard" && <AdminDashboard posts={initialPosts} activity={initialActivity} openEditor={openEditor} setSection={setSection} />}
+        {section === "dashboard" && <AdminDashboard posts={initialPosts} activity={initialActivity} settings={settings} openEditor={openEditor} setSection={setSection} />}
         {section === "posts" && <AdminPosts posts={initialPosts} openEditor={openEditor} />}
-        {section === "editor" && <AdminEditor posts={initialPosts} tags={initialTags} media={initialMedia} postId={editingId} setSection={setSection} />}
+        {section === "editor" && <AdminEditor posts={initialPosts} tags={initialTags} media={initialMedia} settings={settings} postId={editingId} setSection={setSection} />}
         {section === "media" && <AdminMedia media={initialMedia} />}
         {section === "tags" && <AdminTags tags={initialTags} posts={initialPosts} />}
         {section === "home" && <AdminPageEditor page={homePage} crumb="Home Page" publicPath="/" hint='Renders as the lede above the post list on the home page. Supports paragraphs, > blockquotes, and ::: facts blocks.' />}
         {section === "about" && <AdminPageEditor page={aboutPage} crumb="About Page" publicPath="/about" hint='Renders on /about. Supports paragraphs, > blockquotes, and ::: facts blocks with "key | value" lines.' />}
-        {section === "settings" && <AdminSettings />}
+        {section === "settings" && <AdminSettings settings={settings} />}
       </main>
     </div>
   );
 }
 
-function AdminSide({ section, setSection }: { section: Section; setSection: (s: Section) => void }) {
+function AdminSide({ section, setSection, settings }: { section: Section; setSection: (s: Section) => void; settings: Settings }) {
   const items: Array<{ k: Section; label: string }> = [
     { k: "dashboard", label: "Dashboard" },
     { k: "posts",     label: "All Posts" },
@@ -110,9 +112,9 @@ function AdminSide({ section, setSection }: { section: Section; setSection: (s: 
         </form>
       </nav>
       <div className="user">
-        <div className="av">JC</div>
+        <div className="av">{settings.authorInitials}</div>
         <div>
-          <div className="name">J. Calder</div>
+          <div className="name">{settings.authorName}</div>
           <div className="role">Editor</div>
         </div>
       </div>
@@ -120,7 +122,7 @@ function AdminSide({ section, setSection }: { section: Section; setSection: (s: 
   );
 }
 
-function AdminDashboard({ posts, activity, openEditor, setSection }: { posts: Post[]; activity: ActivityRow[]; openEditor: (id: string | null) => void; setSection: (s: Section) => void }) {
+function AdminDashboard({ posts, activity, settings, openEditor, setSection }: { posts: Post[]; activity: ActivityRow[]; settings: Settings; openEditor: (id: string | null) => void; setSection: (s: Section) => void }) {
   const published = posts.filter(p => p.status === "published");
   const drafts = posts.filter(p => p.status === "draft");
   const totalViews = published.reduce((s, p) => s + (p.views || 0), 0);
@@ -130,7 +132,7 @@ function AdminDashboard({ posts, activity, openEditor, setSection }: { posts: Po
       <div className="admin-bar">
         <div>
           <div className="crumbs">Editorial · Overview</div>
-          <h2>Good evening, J.</h2>
+          <h2>Good evening, {settings.authorName.split(/[\s.]+/)[0] || settings.authorName}.</h2>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <button className="btn ghost" onClick={() => setSection("posts")}>All Posts</button>
@@ -270,7 +272,7 @@ function AdminPosts({ posts, openEditor }: { posts: Post[]; openEditor: (id: str
   );
 }
 
-function AdminEditor({ posts, tags, media, postId, setSection }: { posts: Post[]; tags: string[]; media: MediaFile[]; postId: string | null; setSection: (s: Section) => void }) {
+function AdminEditor({ posts, tags, media, settings, postId, setSection }: { posts: Post[]; tags: string[]; media: MediaFile[]; settings: Settings; postId: string | null; setSection: (s: Section) => void }) {
   const router = useRouter();
   const existing = postId ? posts.find(p => p.id === postId) ?? null : null;
   const [title, setTitle] = useState(existing?.title ?? "Untitled entry");
@@ -438,7 +440,7 @@ function AdminEditor({ posts, tags, media, postId, setSection }: { posts: Post[]
             </h1>
             <p style={{ fontFamily: "var(--serif)", fontStyle: "italic", color: "var(--ink-mute)", margin: "0 0 16px", fontSize: 17 }}>{subtitle}</p>
             <div style={{ fontFamily: "var(--sans)", fontSize: 10.5, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--ink-mute)", paddingTop: 12, borderTop: "1px solid var(--rule)", marginBottom: 24 }}>
-              By J. Calder · {date} · {readingTime} min
+              By {settings.authorName} · {date} · {readingTime} min
             </div>
             <div className="preview-body">
               <MarkdownPreview src={body} />
@@ -806,19 +808,59 @@ function AdminPageEditor({ page, crumb, publicPath, hint }: { page: Page; crumb:
   );
 }
 
-function AdminSettings() {
+function AdminSettings({ settings }: { settings: Settings }) {
+  const router = useRouter();
+  const [authorName, setAuthorName] = useState(settings.authorName);
+  const [authorInitials, setAuthorInitials] = useState(settings.authorInitials);
+  const [busy, setBusy] = useState(false);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const onSave = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await saveSettings({
+        authorName: authorName.trim() || "Anonymous",
+        authorInitials: (authorInitials.trim() || authorName.trim().slice(0, 2) || "AN").toUpperCase(),
+      });
+      setSavedAt(new Date());
+      router.refresh();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Save failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <>
       <div className="admin-bar">
         <div><div className="crumbs">Editorial · Configuration</div><h2>Settings</h2></div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <span className="editor-meta-line" style={{ fontSize: 10, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+            {busy ? "SAVING…" : savedAt ? `SAVED ${savedAt.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}` : "UNSAVED"}
+          </span>
+          <button className="btn gold" onClick={onSave} disabled={busy}>Save</button>
+        </div>
       </div>
-      <div style={{ fontFamily: "var(--serif)", fontStyle: "italic", color: "var(--ink-mute)", fontSize: 15, marginBottom: 20 }}>
-        Journal-level settings are read-only at the moment.
+      {err && (
+        <div style={{ fontFamily: "var(--serif)", fontStyle: "italic", color: "#a44", fontSize: 14, margin: "0 0 16px" }}>
+          {err}
+        </div>
+      )}
+      <div style={{ maxWidth: 480 }}>
+        <div className="field">
+          <label>Author name</label>
+          <input value={authorName} onChange={e => setAuthorName(e.target.value)} placeholder="Your display name" />
+        </div>
+        <div className="field">
+          <label>Author initials (used in the sidebar avatar)</label>
+          <input value={authorInitials} onChange={e => setAuthorInitials(e.target.value)} placeholder="e.g. JC" maxLength={4} style={{ maxWidth: 120 }} />
+        </div>
       </div>
-      <div style={{ maxWidth: 640 }}>
-        <div className="field"><label>Journal title</label><input defaultValue="Moonshine Mathematics" disabled /></div>
-        <div className="field"><label>Subtitle</label><input defaultValue="scientia per noctem · vol. i" disabled /></div>
-        <div className="field"><label>Author name</label><input defaultValue="J. Calder" disabled /></div>
+      <div style={{ fontFamily: "var(--serif)", fontStyle: "italic", color: "var(--ink-mute)", fontSize: 13, marginTop: 12 }}>
+        Used as the byline on every post and in the editor preview.
       </div>
     </>
   );
