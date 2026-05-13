@@ -63,7 +63,7 @@ export function AdminApp({ initialPosts, initialTags, initialActivity, initialMe
         {section === "editor" && <AdminEditor posts={initialPosts} tags={initialTags} media={initialMedia} settings={settings} postId={editingId} setSection={setSection} />}
         {section === "media" && <AdminMedia media={initialMedia} />}
         {section === "tags" && <AdminTags tags={initialTags} posts={initialPosts} />}
-        {section === "home" && <AdminPageEditor page={homePage} crumb="Home Page" publicPath="/" hint='Renders as the lede above the post list on the home page. Supports paragraphs, > blockquotes, and ::: facts blocks.' />}
+        {section === "home" && <AdminPageEditor page={homePage} crumb="Journal Intro" publicPath="/" hint='Appears as the italic intro above the post list at /. Supports paragraphs, > blockquotes, and ::: facts blocks.' />}
         {section === "about" && <AdminPageEditor page={aboutPage} crumb="About Page" publicPath="/about" hint='Renders on /about. Supports paragraphs, > blockquotes, and ::: facts blocks with "key | value" lines.' />}
         {section === "settings" && <AdminSettings settings={settings} />}
       </main>
@@ -78,7 +78,7 @@ function AdminSide({ section, setSection, settings }: { section: Section; setSec
     { k: "editor",    label: "New Entry" },
     { k: "media",     label: "Media" },
     { k: "tags",      label: "Tags" },
-    { k: "home",      label: "Home Page" },
+    { k: "home",      label: "Journal Intro" },
     { k: "about",     label: "About Page" },
     { k: "settings",  label: "Settings" },
   ];
