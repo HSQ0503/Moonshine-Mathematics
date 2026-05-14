@@ -3,7 +3,6 @@ import { Masthead, Footer } from "@/components/Chrome";
 import { PageContent } from "@/components/PageContent";
 import { Moon, phaseName, type Phase } from "@/components/Moon";
 import { CycleRibbon } from "@/components/CycleRibbon";
-import { FloatingScrollMoon } from "@/components/ScrollMoon";
 import { Asterism } from "@/components/Asterism";
 import { formatDate, phaseFor, cycleFor, toRoman, romanize, type Post } from "@/lib/data";
 import { getPublishedPosts, getPage, getSettings } from "@/lib/db";
@@ -24,7 +23,6 @@ export default async function HomePage() {
 
   return (
     <>
-      <FloatingScrollMoon />
       <div className="shell">
         <Masthead page="home" />
         <CycleRibbon />

@@ -1,6 +1,5 @@
 import { Masthead, Footer } from "@/components/Chrome";
 import { PageContent } from "@/components/PageContent";
-import { FloatingScrollMoon } from "@/components/ScrollMoon";
 import { Moon, type Phase } from "@/components/Moon";
 import { getPage, getSettings } from "@/lib/db";
 
@@ -39,10 +38,8 @@ export default async function AboutPage() {
   ];
 
   return (
-    <>
-      <FloatingScrollMoon />
-      <div className="shell">
-        <Masthead page="about" />
+    <div className="shell">
+      <Masthead page="about" />
         <div className="about-grid">
           <article className="about-prose">
             <h1>{title}</h1>
@@ -90,8 +87,7 @@ export default async function AboutPage() {
           </div>
         </div>
 
-        <Footer />
-      </div>
-    </>
+      <Footer />
+    </div>
   );
 }

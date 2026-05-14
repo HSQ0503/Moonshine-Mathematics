@@ -99,9 +99,18 @@ button { font-family: inherit; cursor: pointer; }
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 32px;
-  padding-bottom: 28px;
+  padding: 18px 0 22px;
   border-bottom: 1px solid var(--rule);
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--vellum);
+  margin: -56px -56px 0;
+  padding-left: 56px;
+  padding-right: 56px;
+}
+@media (max-width: 900px) {
+  .masthead { margin: -40px -24px 0; padding-left: 24px; padding-right: 24px; }
 }
 
 .masthead-title {
@@ -1013,31 +1022,6 @@ button { font-family: inherit; cursor: pointer; }
 }
 .footnotes ol { padding-left: 22px; margin: 0; }
 .footnotes li { margin-bottom: 6px; line-height: 1.5; }
-
-/* ── Floating scroll-moon ─────────────────────────────── */
-
-.scroll-moon-floating {
-  position: fixed;
-  top: 96px;
-  right: 56px;
-  width: 84px; height: 84px;
-  z-index: 2;
-  pointer-events: none;
-  opacity: 0.95;
-  display: flex; align-items: center; justify-content: center;
-}
-.scroll-moon-floating .label {
-  position: absolute;
-  bottom: -30px; left: 50%;
-  transform: translateX(-50%);
-  font-family: var(--sans);
-  font-size: 9.5px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  white-space: nowrap;
-}
-@media (max-width: 1100px) { .scroll-moon-floating { display: none; } }
 
 /* ── Footer ───────────────────────────────────────────── */
 

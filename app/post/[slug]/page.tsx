@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { Masthead, Footer } from "@/components/Chrome";
-import { FloatingScrollMoon } from "@/components/ScrollMoon";
 import { K, ThmBlock, FNote, Footnotes } from "@/components/Math";
 import { PostBody } from "@/components/PostBody";
 import { Moon, phaseName } from "@/components/Moon";
@@ -24,8 +23,6 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
   const cy = cycleFor(post.number);
 
   return (
-    <>
-      <FloatingScrollMoon />
     <div className="shell">
       <Masthead page="post" />
       <article className="article">
@@ -57,7 +54,6 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
       </article>
       <Footer />
     </div>
-    </>
 
   );
 }

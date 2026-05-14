@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Moon, type Phase, phaseName } from "./Moon";
+import { Moon, type Phase } from "./Moon";
 
 function useScrollPhase(): Phase {
   const [phase, setPhase] = useState<Phase>(0);
@@ -40,14 +40,4 @@ function useScrollPhase(): Phase {
 export function ScrollMoon({ size = 36 }: { size?: number }) {
   const phase = useScrollPhase();
   return <Moon phase={phase} size={size} tone="gold" glow />;
-}
-
-export function FloatingScrollMoon() {
-  const phase = useScrollPhase();
-  return (
-    <div className="scroll-moon-floating" aria-hidden>
-      <Moon phase={phase} size={72} tone="gold" glow />
-      <span className="label">{phaseName(phase)}</span>
-    </div>
-  );
 }
