@@ -151,7 +151,7 @@ function AdminDashboard({ posts, activity, settings, openEditor, setSection }: {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 24 }}>
+      <div className="admin-dashboard-grid">
         <section>
           <div className="section-label" style={{ margin: "4px 0 14px" }}>Recent entries</div>
           <PostsTable posts={posts.slice(0, 5)} onEdit={openEditor} />
@@ -636,7 +636,7 @@ function AdminMedia({ media }: { media: MediaFile[] }) {
           No files yet. Upload an SVG, image, or PDF to get started.
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18 }}>
+        <div className="admin-media-grid">
           {media.map(f => (
             <div key={f.name} style={{ border: "1px solid var(--rule)", background: "var(--vellum-warm)" }}>
               <div style={{ height: 140, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid var(--rule)", background: "repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(20,23,42,0.04) 6px, rgba(20,23,42,0.04) 7px)", overflow: "hidden" }}>
